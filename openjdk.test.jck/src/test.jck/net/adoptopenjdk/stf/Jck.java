@@ -255,14 +255,8 @@ public class Jck implements StfPluginInterface {
 			if (config.equals("NULL")) {
 				config = "default";	
 			}
-			String subdir = "config/" + config;
-			try {
-				jckConfigLoc = test.env().findPrereqDirectory(subdir);
-			} catch (StfException e) {
-				throw new StfException(testExecutionType + "Cannot locate the configuration directory containing the Kerberos and Http server settings in a subdirectory " + subdir + " beneath a prereq directory.  The requested tests include at least one of the tests which require these files.");
-			}
-			krbConfFile = jckConfigLoc.childFile("krb5.conf");
-			testProps = jckConfigLoc + "/jcktest.properties";
+			krbConfFile = repositoryConfigLoc.childFile("/" + config + "/krb5.conf");
+			testProps = repositoryConfigLoc.childFile("/" + config + "/jcktest.properties").toString();
 			Properties prop = new Properties();
 			InputStream ins = new FileInputStream(testProps);
 			prop.load(ins);
@@ -323,6 +317,15 @@ public class Jck implements StfPluginInterface {
 		test.doWriteFile("Writing into jtb file.", newJtbFileRef, fileContent);
 		
 		test.doEchoFile("The JTB file generated\n", newJtbFileRef);
+
+		if ( tests.contains("api/javax_net") ) {
+			// Requires TLS 1.0/1.1 enabling
+			DirectoryRef secPropsLocation = test.env().getResultsDir().childDirectory("SecProps");
+			test.doMkdir("Creating dir to store the custom security properties", secPropsLocation);
+			FileRef secPropsFileRef = secPropsLocation.childFile("security.properties");
+			String secPropsContents = "jdk.tls.disabledAlgorithms=SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, anon, NULL, include jdk.disabled.namedCurves";
+			test.doWriteFile("Writing into security.properties file.", secPropsFileRef, secPropsContents);
+		}
 
 		if ( PlatformFinder.isZOS() ) {
 			test.doIconvFile("Converting .jtb file to ascii", newJtbFileRef.getSpec(), "IBM-1047", "ISO8859-1");
@@ -620,7 +623,8 @@ public class Jck implements StfPluginInterface {
 				keyword += "&!robot";
 			}
 
-			if ( tests.contains("api/signaturetest") ) {
+			if ( !platform.equals("win32") &&
+                             (tests.contains("api/signaturetest") || tests.contains("api/java_io")) ) {
 				fileContent += "set jck.env.testPlatform.xWindows \"No\"" + ";\n";
 			}
 
@@ -631,7 +635,6 @@ public class Jck implements StfPluginInterface {
 				fileContent += "set jck.env.runtime.testExecute.libPathEnv " + libPath + ";\n";
 				fileContent += "set jck.env.runtime.testExecute.nativeLibPathValue \"" + jckRuntimeNativeLibValue + "\"" + ";\n";
 			}
-
 			// tools.jar was incorporated into modules from Java 9
 			if ( jckVersion.contains("jck8") ) {
 				if ( tests.startsWith("vm/jvmti") || tests.equals("vm") || tests.equals("api") || tests.equals("api/java_lang") || tests.contains("api/java_lang/instrument") ) {
@@ -725,7 +728,7 @@ public class Jck implements StfPluginInterface {
 			}
 			
 			// Get any additional jvm options for specific tests.
-			extraJvmOptions += getTestSpecificJvmOptions(jckVersion, tests);
+			extraJvmOptions += getTestSpecificJvmOptions(test, jckVersion, tests);
 
 			extraJvmOptions += suppressOutOfMemoryDumpOptions;
 			
@@ -853,6 +856,12 @@ public class Jck implements StfPluginInterface {
 			} else {
 				throw new StfException("Unknown platform:: " + platform);
 			}
+
+                        if (platform.equals("linux")) {
+				// bash required to run schema scripts on linux (cannot be standard sh)
+				xjcCmd = "bash "+xjcCmd;
+				jxcCmd = "bash "+jxcCmd;
+                        }
 			
 			fileContent += "concurrency " + concurrencyString + ";\n";
 			fileContent += "timeoutfactor 1" + ";\n";							// All Devtools tests take less than 1h to finish.
@@ -885,7 +894,7 @@ public class Jck implements StfPluginInterface {
 			}
 			
 			// Get any additional jvm options for specific tests.
-			extraJvmOptions += getTestSpecificJvmOptions(jckVersion, tests);
+			extraJvmOptions += getTestSpecificJvmOptions(test, jckVersion, tests);
 
 			extraJvmOptions += suppressOutOfMemoryDumpOptions;
 			
@@ -897,7 +906,7 @@ public class Jck implements StfPluginInterface {
 	
 	private boolean testsRequireDisplay (String tests) {
 		if (tests.equals("api") ||
-			tests.contains("api/java_applet") || tests.contains("api/java_io") ||
+			tests.contains("api/java_applet") ||
 			tests.contains("api/javax_swing") || tests.contains("api/javax_sound") ||
 			tests.contains("api/java_awt")  || tests.contains("api/javax_print") ||
 			tests.contains("api/java_beans") || tests.contains("api/javax_accessibility") ||
@@ -946,8 +955,15 @@ public class Jck implements StfPluginInterface {
 		return returnJckTopDir;
 	}
 	
-	private String getTestSpecificJvmOptions (String jckVersion, String tests) {
+	private String getTestSpecificJvmOptions (StfCoreExtension test, String jckVersion, String tests) throws StfException {
 		String testSpecificJvmOptions = "";
+
+		if ( tests.contains("api/javax_net") ) {
+			// Needs extra security.properties
+			FileRef secPropsFile = test.env().getResultsDir().childDirectory("SecProps").childFile("security.properties");
+			testSpecificJvmOptions += " -Djava.security.properties=" + secPropsFile;
+		}
+
 		Matcher matcher = Pattern.compile("jck(\\d+)c?").matcher(jckVersion);
 		if (matcher.matches()) {
 			// first group is going to be 8, 9, 10, 11, etc.
