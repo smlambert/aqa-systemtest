@@ -601,8 +601,10 @@ public class Jck implements StfPluginInterface {
 					fileContent += "set jck.env.testPlatform.headless Yes" + ";\n";
 					fileContent += "set jck.env.runtime.testExecute.otherEnvVars LIBPATH=/usr/lpp/tcpip/X11R66/lib" + ";\n";
 				} else if (platform.equals("macosx")) {
-                    fileContent += "set jck.env.testPlatform.headless Yes" + ";\n";
-                    fileContent += "set jck.env.runtime.testExecute.otherEnvVars AWT_FORCE_HEADFUL=true" + ";\n";
+                    //fileContent += "set jck.env.testPlatform.headless Yes" + ";\n";
+					//fileContent += "set jck.env.runtime.testExecute.otherEnvVars AWT_FORCE_HEADFUL=true" + ";\n";
+					fileContent += "set jck.env.testPlatform.headless No" + ";\n";
+					fileContent += "set jck.env.testPlatform.xWindows Yes" + ";\n";
                 }
 				else {
 					if ( !platform.equals("win32") ) {
