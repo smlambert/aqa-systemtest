@@ -603,7 +603,7 @@ public class Jck implements StfPluginInterface {
 				} else if (platform.equals("macosx")) {
                     //fileContent += "set jck.env.testPlatform.headless Yes" + ";\n";
 					//fileContent += "set jck.env.runtime.testExecute.otherEnvVars AWT_FORCE_HEADFUL=true" + ";\n";
-					fileContent += "set jck.env.testPlatform.headless No" + ";\n";
+					fileContent += "set jck.env.testPlatform.headless Yes" + ";\n";
 					fileContent += "set jck.env.testPlatform.xWindows Yes" + ";\n";
                 }
 				else {
