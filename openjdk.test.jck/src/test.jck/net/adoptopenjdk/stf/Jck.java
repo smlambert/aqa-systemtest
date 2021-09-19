@@ -69,7 +69,6 @@ public class Jck implements StfPluginInterface {
 	private String jckVersion;
 	private String config;
 	private String jckRoot;
-	private boolean useStaticJtiFile = false;
 	
 	private enum TestSuite{
 		RUNTIME, COMPILER, DEVTOOLS; 
@@ -79,6 +78,7 @@ public class Jck implements StfPluginInterface {
 	// Variables which hold the derived values relative to the JCK root
 	private DirectoryRef jckBase;
 	private FileRef jtiFile;
+	private String jtiFilePath;
 	private DirectoryRef nativesLoc;
 	private DirectoryRef jckConfigLoc;
 	private String initialJtxFullPath;
@@ -214,13 +214,13 @@ public class Jck implements StfPluginInterface {
 		platform = test.env().getOsgiOperatingSystemName();	
 		jckBase = test.env().findPrereqDirectory(testSuiteFolder);
 		nativesLoc = test.env().findPrereqDirectory("natives/" + test.env().getPlatformSimple());
-		jtiFile = testArgs.get("jtifile");
+		jtiFilePath = testArgs.get("jtifile");
 
 		DirectoryRef repositoryConfigLoc = test.env().findTestDirectory("openjdk.test.jck/config");
-		if (jtiFile == null) {
+		if (jtiFilePath == null) {
 			jtiFile = repositoryConfigLoc.childFile("/" + jckVersion + "/" + testSuite.toString().toLowerCase() + ".jti");
 		} else {
-			useStaticJtiFile = true;
+			jtiFile = new FileRef(jtiFilePath);
 		}
 		
 		//fileUrl = "file:///" + jckRoot + "/" + testSuiteFolder + "/testsuite.jtt";
@@ -417,7 +417,7 @@ public class Jck implements StfPluginInterface {
 			}
 			
 			String commandLine = " -config "+ jtiFile;
-			if (!useStaticJtiFile) {
+			if (jtiFilePath.equals("")) {
 				commandLine = commandLine + " @" + jtbFile;
 			}
 
