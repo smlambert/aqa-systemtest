@@ -220,7 +220,9 @@ public class Jck implements StfPluginInterface {
 		if (jtiFilePath == null) {
 			jtiFile = repositoryConfigLoc.childFile("/" + jckVersion + "/" + testSuite.toString().toLowerCase() + ".jti");
 		} else {
-			jtiFile = FileRef.findFile(jtiFilePath, jckBase);
+			ArrayList<DirectoryRef> roots = new ArrayList<DirectoryRef>();
+			roots.add(jckBase);
+			jtiFile = FileRef.findFile(jtiFilePath, roots);
 		}
 		
 		//fileUrl = "file:///" + jckRoot + "/" + testSuiteFolder + "/testsuite.jtt";
